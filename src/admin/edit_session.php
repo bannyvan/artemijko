@@ -1,4 +1,5 @@
 <?php
+session_start();
 // Simple script to manually edit work session times
 require __DIR__ . '/../../vendor/autoload.php';
 $config = file_exists(__DIR__ . '/../bot/config.php')
@@ -15,7 +16,12 @@ $sessionId = (int)($_POST['session_id'] ?? 0);
 $newStart = $_POST['start'] ?? null;
 $newEnd = $_POST['end'] ?? null;
 $reason = $_POST['reason'] ?? '';
-$adminId = 1; // TODO: replace with real admin id from auth
+$adminId = $_SESSION['admin_id'] ?? 0;
+if (!$adminId) {
+    http_response_code(403);
+    echo 'Unauthorized';
+    exit;
+}
 
 if ($sessionId && $newStart && $newEnd) {
     $db->beginTransaction();
