@@ -31,17 +31,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>Вход</title>
+    <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-<form method="post">
-    <div>
+<header>
+    <h1>Панель администратора</h1>
+</header>
+<main>
+    <form method="post">
+        <h2>Вход</h2>
         <input type="text" name="username" placeholder="Логин">
-    </div>
-    <div>
         <input type="password" name="password" placeholder="Пароль">
-    </div>
-    <button type="submit">Войти</button>
-    <?php if ($error) echo '<p>' . $error . '</p>'; ?>
-</form>
+        <button type="submit">Войти</button>
+        <?php if ($error) echo '<p id="error">' . $error . '</p>'; ?>
+    </form>
+</main>
+<script src="assets/js/menu.js"></script>
 </body>
 </html>
