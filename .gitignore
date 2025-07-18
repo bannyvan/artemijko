@@ -1,0 +1,15 @@
+# Composer vendor directory
+vendor/
+
+# Node dependencies (if any)
+node_modules/
+
+# Environment files
+.env
+*.env
+config.php
+
+# System files
+.DS_Store
+.idea/
+

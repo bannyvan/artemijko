@@ -1,0 +1,13 @@
+{
+    "name": "time-tracking-bot/project",
+    "description": "Telegram bot and admin panel for employee time tracking",
+    "type": "project",
+    "require": {
+        "telegram-bot/api": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Bot\\": "src/bot/"
+        }
+    }
+}
