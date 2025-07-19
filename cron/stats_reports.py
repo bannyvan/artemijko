@@ -1,8 +1,9 @@
-from telegram import Bot
+from aiogram import Bot
+import asyncio
 from src.bot import config, db
 
 
-def main():
+async def main():
     bot = Bot(config.BOT_TOKEN)
     conn = db.get_connection(config.DB)
     with conn.cursor() as cur:
@@ -16,9 +17,9 @@ def main():
             c2.execute('SELECT telegram_id FROM employees WHERE id=%s', (row['employee_id'],))
             user = c2.fetchone()
             if user:
-                bot.send_message(user['telegram_id'], f"Ваши отработанные часы за неделю: {row['hours']}")
+                await bot.send_message(user['telegram_id'], f"Ваши отработанные часы за неделю: {row['hours']}")
     conn.close()
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

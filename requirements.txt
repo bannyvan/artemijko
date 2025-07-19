@@ -1,2 +1,2 @@
-python-telegram-bot==13.15
+aiogram>=3.5,<4.0
 PyMySQL>=1.0

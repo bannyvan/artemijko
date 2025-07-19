@@ -1,9 +1,10 @@
-from telegram import Bot
+from aiogram import Bot
+import asyncio
 from datetime import datetime, timedelta
 from src.bot import config, db
 
 
-def main():
+async def main():
     bot = Bot(config.BOT_TOKEN)
     conn = db.get_connection(config.DB)
     with conn.cursor() as cur:
@@ -15,9 +16,9 @@ def main():
         """)
         rows = cur.fetchall()
     for r in rows:
-        bot.send_message(r['telegram_id'], 'У вас есть незавершенная смена более 15 часов. Пожалуйста, завершите ее.')
+        await bot.send_message(r['telegram_id'], 'У вас есть незавершенная смена более 15 часов. Пожалуйста, завершите ее.')
     conn.close()
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
