@@ -1,0 +1,13 @@
+# Python artifacts
+__pycache__/
+*.pyc
+.venv/
+
+# Environment files
+.env
+*.env
+config.py
+
+# Misc
+.DS_Store
+.idea/
