@@ -1,0 +1,104 @@
+body {
+    font-family: Arial, sans-serif;
+    background: radial-gradient(circle at top left, #111, #000);
+    color: #0ff;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+h1 {
+    font-size: 2.5rem;
+    text-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 20px #0ff;
+    margin-bottom: 20px;
+}
+
+p {
+    font-size: 1.2rem;
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+button {
+    background: transparent;
+    color: #0ff;
+    border: 2px solid #0ff;
+    padding: 10px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background 0.3s, box-shadow 0.3s;
+}
+
+button:hover {
+    background: rgba(0, 255, 255, 0.1);
+    box-shadow: 0 0 5px #0ff, 0 0 10px #0ff;
+}
+
+nav {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: none;
+    background: rgba(0,0,0,0.8);
+    border-radius: 8px;
+}
+
+nav.open ul {
+    display: block;
+    animation: fadeIn 0.5s ease;
+}
+
+nav li {
+    margin: 10px 20px;
+}
+
+nav a {
+    color: #0ff;
+    text-decoration: none;
+}
+
+.menu-toggle {
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    position: relative;
+}
+
+.menu-toggle span,
+.menu-toggle::before,
+.menu-toggle::after {
+    content: '';
+    display: block;
+    height: 3px;
+    background: #0ff;
+    margin: 6px 0;
+    transition: transform 0.3s;
+}
+
+nav.open .menu-toggle::before {
+    transform: translateY(9px) rotate(45deg);
+}
+
+nav.open .menu-toggle::after {
+    transform: translateY(-9px) rotate(-45deg);
+}
+
+nav.open .menu-toggle span {
+    transform: scale(0);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
