@@ -1,0 +1,68 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: timetracker_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pass}
+      POSTGRES_DB: ${POSTGRES_DB:-timetracker}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    container_name: timetracker_api
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://user:pass@db:5432/timetracker}
+      BOT_TOKEN: ${BOT_TOKEN}
+      JWT_SECRET: ${JWT_SECRET:-change_me}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      MAX_SHIFT_HOURS: ${MAX_SHIFT_HOURS:-12}
+      ROUNDING_MINUTES: ${ROUNDING_MINUTES:-15}
+      REQUIRED_BREAK_AFTER_HOURS: ${REQUIRED_BREAK_AFTER_HOURS:-4}
+      MIN_BREAK_MINUTES: ${MIN_BREAK_MINUTES:-15}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    container_name: timetracker_frontend
+    env_file:
+      - ./.env
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+      VITE_SENTRY_DSN: ${SENTRY_DSN:-}
+    depends_on:
+      - api
+    ports:
+      - "5173:5173"
+
+  reverse-proxy:
+    image: nginx:1.25-alpine
+    container_name: timetracker_proxy
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      - frontend
+      - api
+
+volumes:
+  db_data: {}

@@ -1,0 +1,9 @@
+{
+  "name": "TimeTracker",
+  "short_name": "Tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#101010",
+  "icons": []
+}

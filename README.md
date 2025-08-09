@@ -1,97 +1,124 @@
-# Time Tracking Telegram Bot
+# TimeTracker Telegram WebApp
 
- Этот проект предоставляет Telegram-бота и веб-панель администратора для учета рабочего времени сотрудников.
- На корневой странице `index.html` расположена витрина с кратким описанием MGrid Pro
- и кнопкой перехода в админ‑панель. Дизайн выполнен в футуристичном стиле с неоновой
- подсветкой и анимированным меню.
+Monorepo: FastAPI + PostgreSQL backend, Vite React TS frontend, PWA with Workbox Background Sync, Telegram WebApp Auth, JWT, React Query, RHF+Zod, Sentry & OpenTelemetry.
 
-## Требования
-- PHP 8.1+
-- Composer
-- MySQL/MariaDB
-- Расширение PhpSpreadsheet
+## Quick start
 
-## Установка
-1. Клонируйте репозиторий и перейдите в папку проекта.
-2. Установите зависимости:
-   ```bash
-   composer install
-   ```
-3. Запустите в браузере `install.php` и заполните форму установки. Скрипт
-   создаст файл `src/bot/config.php`, подготовит базу данных, добавит
-   администратора и установит вебхук Telegram.
+1) Copy env
 
-## Запуск
-Бот запускается через вебхук. Для локального тестирования можно использовать инструменты наподобие `ngrok`.
-
-После первого запуска бот предложит пользователю зарегистрироваться.
-Необходимо последовательно ввести **ФИО**, дату рождения в формате `ДД.ММ.ГГГГ`,
-выбрать компанию и указать город. После завершения регистрации откроется меню:
-
-```
-📅 Начать смену | 🛑 Закончить смену
-📊 Моя статистика | ⚙️ Профиль
+```bash
+cp .env.example .env
+# Edit BOT_TOKEN, ALLOWED_ORIGINS
 ```
 
-Меню упрощает управление сменами и просмотр личной статистики.
+2) Start stack
 
-Дополнительные команды:
-
-```
-/report week  - статистика за неделю
-/report month - статистика за месяц
-/history      - последние 5 смен
-/cancel       - отменить регистрацию
+```bash
+docker compose up -d --build
 ```
 
-Веб-панель размещается в каталоге `src/admin`. Страницы используют простое меню
-и стили на CSS для удобной навигации. В `index.php` доступен переключаемый ме
-ню с ссылками на основные разделы, а формы авторизации оформлены в едином стиле.
+3) Apply DB migrations and seed data
 
-### Вход администратора
-
-Создайте пользователя в таблице `admins`:
-
-```sql
-INSERT INTO admins (username, password_hash)
-VALUES ('admin', '<hash>');
+```bash
+make migrate
 ```
 
-Значение `<hash>` можно получить в PHP функцией `password_hash('пароль', PASSWORD_DEFAULT)`.
-После создания учётной записи перейдите на `src/admin/login.php` и войдите.
-ID администратора сохраняется в сессии и используется при редактировании смен.
+4) Open
+- API Swagger: http://localhost:8000/docs
+- Frontend: http://localhost:8080 (proxied via Nginx to frontend dev and backend API)
 
-## Структура
-- `src/bot` – исходники Telegram-бота
-- `src/admin` – файлы веб-панели
-- `src/admin/assets` – стили CSS и скрипты JavaScript
-- `index.html` – главная страница с ссылкой на админ‑панель
-- `database/schema.sql` – схема базы данных
-- `cron/` – скрипты для планировщика (напоминания и отчеты)
+## Services
+- reverse-proxy: Nginx on :8080
+- frontend: Vite dev server on :5173
+- api: FastAPI on :8000
+- db: Postgres 15
 
-## Cron задачи
-Пример ежедневных задач:
+## Auth via Telegram WebApp
+- Frontend calls `POST /auth/telegram?initData=<raw querystring>` using `tgWebAppData` value
+- Server validates HMAC-SHA256 per Telegram docs (bot token) and responds with JWT access and sets HttpOnly refresh cookie
+
+## API Contract (selected)
+- POST /auth/telegram
+- POST /auth/refresh (uses HttpOnly cookie)
+- GET /me
+- GET /shifts?from&to&user_id?&project_id?
+- POST /shifts/start (Idempotency-Key required)
+- POST /shifts/pause
+- POST /shifts/resume
+- POST /shifts/finish (Idempotency-Key required)
+- GET /shifts/:id/breaks
+- POST /breaks/start
+- POST /breaks/finish
+- GET /reports/summary?period=day|week|month
+- GET /reports/export.csv | /reports/export.xlsx
+- GET /requests
+- POST /requests
+- PATCH /requests/:id
+- GET /admin/users
+- PATCH /admin/users/:id
+
+OpenAPI: http://localhost:8000/openapi.json (make openapi to save file)
+
+## Curl examples
+
+Replace ACCESS with the token from /auth/telegram response.
+
+```bash
+# Telegram auth (example initData; compute real one using bot token)
+curl -X POST "http://localhost:8000/auth/telegram?initData=auth_date%3D...&user%3D...&hash%3D..." -c cookies.txt
+
+# Refresh via cookie
+curl -X POST http://localhost:8000/auth/refresh -b cookies.txt
+
+# Me
+curl -H "Authorization: Bearer ACCESS" http://localhost:8000/me
+
+# Start shift (idempotent)
+IK=$(uuidgen)
+curl -X POST http://localhost:8000/shifts/start -H "Authorization: Bearer ACCESS" -H "Idempotency-Key: $IK" -H 'Content-Type: application/json' -d '{"note":"Start"}'
+
+# Pause/Resume
+curl -X POST http://localhost:8000/shifts/pause -H "Authorization: Bearer ACCESS"
+curl -X POST http://localhost:8000/shifts/resume -H "Authorization: Bearer ACCESS"
+
+# Finish shift (idempotent)
+IK=$(uuidgen)
+curl -X POST http://localhost:8000/shifts/finish -H "Authorization: Bearer ACCESS" -H "Idempotency-Key: $IK"
+
+# Breaks
+curl -X POST http://localhost:8000/breaks/start -H "Authorization: Bearer ACCESS" -H 'Content-Type: application/json' -d '{"type":"lunch"}'
+curl -X POST http://localhost:8000/breaks/finish -H "Authorization: Bearer ACCESS"
+
+# Requests
+curl http://localhost:8000/requests -H "Authorization: Bearer ACCESS"
+curl -X POST http://localhost:8000/requests -H "Authorization: Bearer ACCESS" -H 'Content-Type: application/json' -d '{"type":"dayoff","from_date":"2025-01-01","to_date":"2025-01-01","days":1}'
+
+# Reports
+curl "http://localhost:8000/reports/summary?period=day" -H "Authorization: Bearer ACCESS"
+curl -L "http://localhost:8000/reports/export.csv?period=day" -H "Authorization: Bearer ACCESS" -o report.csv
+
+# Admin
+curl http://localhost:8000/admin/users -H "Authorization: Bearer ACCESS"
+curl -X PATCH http://localhost:8000/admin/users/1 -H "Authorization: Bearer ACCESS" -H 'Content-Type: application/json' -d '{"role":"manager"}'
 ```
-0 * * * * php /path/to/project/cron/shift_reminders.php
-0 9 * * 1 php /path/to/project/cron/stats_reports.php
-```
 
-`shift_reminders.php` отправляет уведомление о незавершённых сменах более 15 часов. `stats_reports.php` рассылает еженедельную статистику.
+## Business rules
+- Single active shift enforced
+- Breaks allowed only in active shift
+- Auto-stop after MAX_SHIFT_HOURS
+- Rounding to ROUNDING_MINUTES in reports
+- Idempotency-Key required for start/finish
+- Audit log recorded for key actions
+- Rate limits: /auth (10/min), /shifts start/finish (30/min), pause/resume (60/min)
 
-В базе данных есть таблица `share_links` для хранения токенов публичных ссылок на календарь.
+## PWA/Offline
+- Workbox Background Sync queues POSTs to /shifts/* and /breaks/* in IndexedDB and replays when online
 
-## Ручное редактирование времени
-Администратор может корректировать смены через `src/admin/edit_session.php`. Все изменения фиксируются в таблице `session_changes` с указанием причины и пользователя.
+## Dev tasks
+- Run tests: `make up && make test`
+- Backend dev: `uvicorn app.main:app --reload`
+- Frontend dev: `pnpm dev`
 
-## Роли
-В системе предусмотрены роли **администратор**, **менеджер** и **просмотр**. Настройка ролей осуществляется через таблицы `roles` и `employee_roles`.
-
-## Ссылки общего доступа и экспорт
-Администратор может создать ссылку на просмотр расписания сотрудников.
-В панели выберите пункт «Поделиться календарем» и нажмите «Создать ссылку». Будет сформирован URL вида `/timesheets.php?token=...`. Передайте его заинтересованным лицам.
-
-На странице календаря доступны кнопки «Скачать Excel» для каждого сотрудника. Файлы формируются с помощью библиотеки PhpSpreadsheet.
-
-## Лицензия
-Проект распространяется под лицензией MIT.
+## ERD
+DBML at `docs/schema.dbml` (use dbdiagram.io to render)
 
