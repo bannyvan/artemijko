@@ -5,7 +5,7 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
-// Placeholder for admin panel
-// Future implementation will use Bootstrap and AdminLTE
-
-echo "<h1>Admin Panel in development</h1>";
+echo "<h1>Admin Panel</h1>";
+echo "<ul>";
+echo "<li><a href='vacations.php'>Заявки на отпуск</a></li>";
+echo "</ul>";

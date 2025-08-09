@@ -86,3 +86,27 @@ CREATE TABLE admins (
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Vacation requests from employees
+CREATE TABLE vacation_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    type ENUM('vacation','sick','day_off') DEFAULT 'vacation',
+    comment TEXT,
+    status ENUM('pending','approved','rejected') DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (employee_id) REFERENCES employees(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Temporary table to store vacation request progress
+CREATE TABLE vacation_requests_tmp (
+    telegram_id BIGINT UNSIGNED PRIMARY KEY,
+    step TINYINT NOT NULL DEFAULT 1,
+    start_date DATE,
+    end_date DATE,
+    type ENUM('vacation','sick','day_off') DEFAULT 'vacation',
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
