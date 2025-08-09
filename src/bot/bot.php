@@ -20,7 +20,8 @@ function mainMenu(): string
     return json_encode([
         'keyboard' => [
             ['📅 Начать смену', '🛑 Закончить смену'],
-            ['📊 Моя статистика', '⚙️ Профиль']
+            ['📊 Моя статистика', '⚙️ Профиль'],
+            ['📝 Заявка на отпуск']
         ],
         'resize_keyboard' => true
     ]);
@@ -39,6 +40,7 @@ $text = trim($message->getText());
 $db = getDb($config);
 $employee = getEmployee($db, $chatId);
 $registration = getRegistration($db, $chatId);
+$vacation = getVacationRequest($db, $chatId);
 
 if ($text === '/start') {
     if ($employee) {
@@ -92,13 +94,72 @@ if ($text === '/cancel') {
     if ($registration && !$employee) {
         cancelRegistration($db, $chatId);
         $bot->sendMessage($chatId, 'Регистрация отменена.', null, false, null, mainMenu());
+    } elseif ($vacation) {
+        cancelVacationRequest($db, $chatId);
+        $bot->sendMessage($chatId, 'Заявка отменена.', null, false, null, mainMenu());
     } else {
         $bot->sendMessage($chatId, 'Нечего отменять.', null, false, null, mainMenu());
     }
     exit;
 }
 
+if ($vacation && $employee) {
+    switch ((int)$vacation['step']) {
+        case 1:
+            if (!preg_match('/^\d{2}\.\d{2}\.\d{4}$/', $text)) {
+                $bot->sendMessage($chatId, 'Неверный формат. Используйте ДД.ММ.ГГГГ:');
+                break;
+            }
+            $date = DateTime::createFromFormat('d.m.Y', $text)->format('Y-m-d');
+            updateVacationRequest($db, $chatId, ['start_date' => $date, 'step' => 2]);
+            $bot->sendMessage($chatId, 'Введите дату окончания отпуска (ДД.ММ.ГГГГ):');
+            break;
+        case 2:
+            if (!preg_match('/^\d{2}\.\d{2}\.\d{4}$/', $text)) {
+                $bot->sendMessage($chatId, 'Неверный формат. Используйте ДД.ММ.ГГГГ:');
+                break;
+            }
+            $date = DateTime::createFromFormat('d.m.Y', $text)->format('Y-m-d');
+            updateVacationRequest($db, $chatId, ['end_date' => $date, 'step' => 3]);
+            $markup = json_encode([
+                'keyboard' => [
+                    ['Отпуск', 'Больничный'],
+                    ['Отгул']
+                ],
+                'one_time_keyboard' => true,
+                'resize_keyboard' => true
+            ]);
+            $bot->sendMessage($chatId, 'Выберите тип заявки:', null, false, null, $markup);
+            break;
+        case 3:
+            $map = ['Отпуск' => 'vacation', 'Больничный' => 'sick', 'Отгул' => 'day_off'];
+            if (!isset($map[$text])) {
+                $bot->sendMessage($chatId, 'Пожалуйста, выберите вариант с клавиатуры.');
+                break;
+            }
+            updateVacationRequest($db, $chatId, ['type' => $map[$text], 'step' => 4]);
+            $bot->sendMessage($chatId, 'Добавьте комментарий или отправьте "-" если без комментария:');
+            break;
+        case 4:
+            $comment = $text === '-' ? null : $text;
+            updateVacationRequest($db, $chatId, ['comment' => $comment]);
+            finishVacationRequest($db, $chatId, $employee['id']);
+            $bot->sendMessage($chatId, 'Заявка отправлена', null, false, null, mainMenu());
+            break;
+    }
+    exit;
+}
+
 switch ($text) {
+    case '📝 Заявка на отпуск':
+    case '/vacation':
+        if (!$employee) {
+            $bot->sendMessage($chatId, 'Сначала зарегистрируйтесь командой /start');
+            break;
+        }
+        startVacationRequest($db, $chatId);
+        $bot->sendMessage($chatId, 'Введите дату начала отпуска (ДД.ММ.ГГГГ):');
+        break;
     case '📅 Начать смену':
     case '/start_work':
         if (!$employee) {
