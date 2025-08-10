@@ -1,6 +1,6 @@
 {
-  "name": "TimeTracker",
-  "short_name": "Tracker",
+  "name": "Учёт времени",
+  "short_name": "Трекер",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
