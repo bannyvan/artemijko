@@ -1,124 +1,122 @@
-# TimeTracker Telegram WebApp
+# Тайм‑трекер (Telegram WebApp)
 
-Monorepo: FastAPI + PostgreSQL backend, Vite React TS frontend, PWA with Workbox Background Sync, Telegram WebApp Auth, JWT, React Query, RHF+Zod, Sentry & OpenTelemetry.
+Монорепозиторий: бэкенд FastAPI + PostgreSQL, фронтенд Vite/React/TS, PWA с Workbox Background Sync, авторизация через Telegram WebApp initData → JWT, React Query, RHF+Zod, Sentry и OpenTelemetry.
 
-## Quick start
+## Быстрый старт
 
-1) Copy env
+1) Скопируйте окружение
 
 ```bash
 cp .env.example .env
-# Edit BOT_TOKEN, ALLOWED_ORIGINS
+# Укажите BOT_TOKEN и ALLOWED_ORIGINS
 ```
 
-2) Start stack
+2) Поднимите сервисы
 
 ```bash
 docker compose up -d --build
 ```
 
-3) Apply DB migrations and seed data
+3) Примените миграции и сид‑данные
 
 ```bash
 make migrate
 ```
 
-4) Open
-- API Swagger: http://localhost:8000/docs
-- Frontend: http://localhost:8080 (proxied via Nginx to frontend dev and backend API)
+4) Откройте
+- Swagger: http://localhost:8000/docs
+- Фронтенд (через Nginx): http://localhost:8080
 
-## Services
-- reverse-proxy: Nginx on :8080
-- frontend: Vite dev server on :5173
-- api: FastAPI on :8000
+## Сервисы
+- reverse-proxy: Nginx на :8080
+- frontend: Vite dev сервер на :5173
+- api: FastAPI на :8000
 - db: Postgres 15
 
-## Auth via Telegram WebApp
-- Frontend calls `POST /auth/telegram?initData=<raw querystring>` using `tgWebAppData` value
-- Server validates HMAC-SHA256 per Telegram docs (bot token) and responds with JWT access and sets HttpOnly refresh cookie
+## Авторизация через Telegram WebApp
+- Фронт отправляет `POST /auth/telegram?initData=<сырой querystring>` (используйте `tgWebAppData`)
+- Сервер валидирует HMAC-SHA256 (BOT_TOKEN), возвращает JWT access и ставит HttpOnly refresh cookie
 
-## API Contract (selected)
-- POST /auth/telegram
-- POST /auth/refresh (uses HttpOnly cookie)
-- GET /me
-- GET /shifts?from&to&user_id?&project_id?
-- POST /shifts/start (Idempotency-Key required)
-- POST /shifts/pause
-- POST /shifts/resume
-- POST /shifts/finish (Idempotency-Key required)
-- GET /shifts/:id/breaks
-- POST /breaks/start
-- POST /breaks/finish
-- GET /reports/summary?period=day|week|month
-- GET /reports/export.csv | /reports/export.xlsx
-- GET /requests
-- POST /requests
-- PATCH /requests/:id
-- GET /admin/users
-- PATCH /admin/users/:id
+## API (основные)
+- POST /auth/telegram — вход по initData
+- POST /auth/refresh — обновление access по cookie
+- GET /me — профиль и настройки
+- GET /shifts — список смен
+- POST /shifts/start — старт смены (обязателен заголовок Idempotency-Key)
+- POST /shifts/pause — пауза
+- POST /shifts/resume — продолжение
+- POST /shifts/finish — завершение смены (Idempotency-Key обязателен)
+- GET /shifts/:id/breaks — перерывы смены
+- POST /breaks/start — начало перерыва
+- POST /breaks/finish — конец перерыва
+- GET /reports/summary — сводка день/неделя/месяц
+- GET /reports/export.csv | /reports/export.xlsx — экспорт
+- GET /requests — заявки
+- POST /requests — создать
+- PATCH /requests/:id — изменить статус/комментарий
+- GET /admin/users — пользователи
+- PATCH /admin/users/:id — смена роли/статуса
 
-OpenAPI: http://localhost:8000/openapi.json (make openapi to save file)
+OpenAPI: http://localhost:8000/openapi.json (`make openapi` сохранит в корень)
 
-## Curl examples
-
-Replace ACCESS with the token from /auth/telegram response.
+## Примеры curl
 
 ```bash
-# Telegram auth (example initData; compute real one using bot token)
+# Вход по Telegram (пример; реальный initData подпишите вашим BOT_TOKEN)
 curl -X POST "http://localhost:8000/auth/telegram?initData=auth_date%3D...&user%3D...&hash%3D..." -c cookies.txt
 
-# Refresh via cookie
+# Обновление токена по cookie
 curl -X POST http://localhost:8000/auth/refresh -b cookies.txt
 
-# Me
+# Профиль
 curl -H "Authorization: Bearer ACCESS" http://localhost:8000/me
 
-# Start shift (idempotent)
+# Старт смены (идемпотентно)
 IK=$(uuidgen)
-curl -X POST http://localhost:8000/shifts/start -H "Authorization: Bearer ACCESS" -H "Idempotency-Key: $IK" -H 'Content-Type: application/json' -d '{"note":"Start"}'
+curl -X POST http://localhost:8000/shifts/start -H "Authorization: Bearer ACCESS" -H "Idempotency-Key: $IK" -H 'Content-Type: application/json' -d '{"note":"Старт"}'
 
-# Pause/Resume
+# Пауза/Продолжить
 curl -X POST http://localhost:8000/shifts/pause -H "Authorization: Bearer ACCESS"
 curl -X POST http://localhost:8000/shifts/resume -H "Authorization: Bearer ACCESS"
 
-# Finish shift (idempotent)
+# Завершение (идемпотентно)
 IK=$(uuidgen)
 curl -X POST http://localhost:8000/shifts/finish -H "Authorization: Bearer ACCESS" -H "Idempotency-Key: $IK"
 
-# Breaks
+# Перерывы
 curl -X POST http://localhost:8000/breaks/start -H "Authorization: Bearer ACCESS" -H 'Content-Type: application/json' -d '{"type":"lunch"}'
 curl -X POST http://localhost:8000/breaks/finish -H "Authorization: Bearer ACCESS"
 
-# Requests
+# Заявки
 curl http://localhost:8000/requests -H "Authorization: Bearer ACCESS"
 curl -X POST http://localhost:8000/requests -H "Authorization: Bearer ACCESS" -H 'Content-Type: application/json' -d '{"type":"dayoff","from_date":"2025-01-01","to_date":"2025-01-01","days":1}'
 
-# Reports
+# Отчёты
 curl "http://localhost:8000/reports/summary?period=day" -H "Authorization: Bearer ACCESS"
 curl -L "http://localhost:8000/reports/export.csv?period=day" -H "Authorization: Bearer ACCESS" -o report.csv
 
-# Admin
+# Админка
 curl http://localhost:8000/admin/users -H "Authorization: Bearer ACCESS"
 curl -X PATCH http://localhost:8000/admin/users/1 -H "Authorization: Bearer ACCESS" -H 'Content-Type: application/json' -d '{"role":"manager"}'
 ```
 
-## Business rules
-- Single active shift enforced
-- Breaks allowed only in active shift
-- Auto-stop after MAX_SHIFT_HOURS
-- Rounding to ROUNDING_MINUTES in reports
-- Idempotency-Key required for start/finish
-- Audit log recorded for key actions
-- Rate limits: /auth (10/min), /shifts start/finish (30/min), pause/resume (60/min)
+## Бизнес‑правила
+- Одна активная смена одновременно
+- Перерыв допускается только в активной смене
+- Авто‑стоп по `MAX_SHIFT_HOURS`
+- Округление по `ROUNDING_MINUTES` в отчётах
+- Для start/finish обязателен `Idempotency-Key`
+- Все ключевые действия пишутся в аудит
+- Лимиты: /auth (10/мин), /shifts start/finish (30/мин), pause/resume (60/мин)
 
-## PWA/Offline
-- Workbox Background Sync queues POSTs to /shifts/* and /breaks/* in IndexedDB and replays when online
+## PWA/Офлайн
+- Workbox Background Sync ставит в очередь POST к /shifts/* и /breaks/* и отправляет при восстановлении сети
 
-## Dev tasks
-- Run tests: `make up && make test`
-- Backend dev: `uvicorn app.main:app --reload`
-- Frontend dev: `pnpm dev`
+## Разработка
+- Тесты: `make up && make test`
+- Бэкенд dev: `uvicorn app.main:app --reload`
+- Фронтенд dev: `pnpm dev`
 
 ## ERD
-DBML at `docs/schema.dbml` (use dbdiagram.io to render)
+DBML в `docs/schema.dbml` (можно визуализировать в dbdiagram.io)
 
