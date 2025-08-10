@@ -1,0 +1,3 @@
+{
+  "$comment": "Fetch the live OpenAPI at /openapi.json or run `make openapi` to save it at repo root."
+}
