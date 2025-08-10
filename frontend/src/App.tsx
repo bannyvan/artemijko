@@ -14,7 +14,7 @@ export default function App() {
 
   return (
     <div className="p-4 space-y-4 max-w-xl mx-auto">
-      <h1 className="text-xl font-semibold">TimeTracker</h1>
+      <h1 className="text-xl font-semibold">Учёт времени</h1>
       <TimeTracker />
       <MyDay />
       <Reports />

@@ -3,6 +3,8 @@ import api from '../api/client'
 import { useMainButton } from '../hooks/useMainButton'
 import { useState } from 'react'
 
+const ruStatus = (s: string) => s === 'active' ? 'активна' : s === 'paused' ? 'пауза' : 'завершена'
+
 export function TimeTracker() {
   const qc = useQueryClient()
   const [note, setNote] = useState('')
@@ -34,7 +36,7 @@ export function TimeTracker() {
           <input className="border rounded p-2 w-full" placeholder="Заметка" value={note} onChange={(e) => setNote(e.target.value)} />
         )}
         {active && (
-          <div className="text-sm text-gray-600">Статус: {active.status}</div>
+          <div className="text-sm text-gray-600">Статус: {ruStatus(active.status)}</div>
         )}
         {active && (
           <button className="w-full bg-red-500 text-white py-2 rounded" onClick={() => finish.mutate()}>Завершить смену</button>

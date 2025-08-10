@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import api from '../api/client'
 
+const ruStatus = (s: string) => s === 'active' ? 'активна' : s === 'paused' ? 'пауза' : 'завершена'
+
 export function MyDay() {
   const { data: shifts } = useQuery({ queryKey: ['shifts'], queryFn: async () => (await api.get('/shifts')).data })
   return (
@@ -9,8 +11,8 @@ export function MyDay() {
       <ul className="space-y-1 text-sm">
         {(shifts || []).slice(0, 5).map((s: any) => (
           <li key={s.id} className="flex justify-between">
-            <span>#{s.id}</span>
-            <span>{s.status}</span>
+            <span>Смена #{s.id}</span>
+            <span>{ruStatus(s.status)}</span>
           </li>
         ))}
       </ul>
